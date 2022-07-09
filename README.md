@@ -5,6 +5,6 @@
 ## 环境
 - Linux系统
 - GPU型号：GeForce RTX 3090
-- python 3.8
-- 其它：`pip freeze >requirements.txt`会将使用的包导入到`requirements.txt`文件中
-    可创建虚拟环境然后`pip install -r requirements.txt`安装相关包
+- python: 3.8
+- pytorch: `pip install torch==1.10.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html` 
+- 其它：`pip install -r requirements.txt`安装相关包
