@@ -3,6 +3,25 @@
 """
 
 import json
+import os
+
+
+def read_data(data_dir):
+    """
+    读取数据集
+
+    :param data_dir (str): 数据集目录
+    :return train_data (dict): 训练数据，包含输入文本和对应的标签序列
+    :return test_data (dict): 测试数据，包含输入文本和对应的标签序列
+    """
+
+    assert os.path.exists(data_dir) == True, "数据集目录不存在"
+
+    train_data = read_jsonl_file(os.path.join(data_dir + "/train.jsonl"))
+    dev_data = read_jsonl_file(os.path.join(data_dir + "/dev.jsonl"))
+
+    return train_data, dev_data
+
 
 def read_jsonl_file(file_path):
     """
