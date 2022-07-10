@@ -12,11 +12,16 @@ class Config:
 
         self.pretrained_model_name = "bert-base-chinese"
         self.data_dir = "./data/cluener/conll_format"
+        self.log_path = "./logs/cluener.log"
+        self.save_path = "./save_models/cluener.pt"
+        self.predict_path = "./predict_results/predict.txt"
         # 标签信息
         self.unique_tags = []
         self.labels_to_ids = {}
         self.ids_to_labels = {}
         self.epochs = 2
+        self.tokenizer = None
+        self.max_length = 128
         self.logger = None
         self.batch_size = 16
         self.log_step = 50  # 每隔多少步(batch)打印一次日志

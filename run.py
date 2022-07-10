@@ -4,7 +4,7 @@ from tqdm import tqdm
 from transformers import BertTokenizer, BertForTokenClassification
 from torch.utils.data import DataLoader
 from tools.data_utils import get_unique_tags
-from tools.data import SequenceLabelingDataset, collate_fn
+from tools.data import SequenceLabelingDataset, collate_fn, PredSequenceLabelingDataset, pred_collate_fn
 from tools.data_utils import read_data
 from torch.utils.data import RandomSampler, SequentialSampler
 from train_and_eval import Trainer
@@ -13,20 +13,15 @@ from tools.utils import get_logger
 from config import Config
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default='./data/cluener/conll_format')
-    parser.add_argument("--log_path", type=str, default='./logs/cluener.log')
-    parser.add_argument("--save_path", type=str, default="./save_models/cluener.pt")
-    parser.add_argument("--predict_path", type=str, default="./predict_results/predict.txt")
+def load_data(opt):
+    """
+    根据设置的参数加载数据
+    包括得到标签信息(如映射等)和dataset以及dataloader
 
-    args = parser.parse_args()
-    print(args)
-    opt = Config(args)
-    logger = get_logger(opt.log_path)
-    
+    """
+
     # 加载数据
-    train_data, dev_data = read_data(opt.data_dir)
+    train_data, dev_data, test_data = read_data(opt.data_dir)
 
     # 得到标签相关信息, 一方面为了将标签转换为索引, 另一方面为BERT初始化时使用
     unique_tags, labels_to_ids, ids_to_labels = get_unique_tags(train_data)
@@ -34,19 +29,47 @@ if __name__ == "__main__":
     opt.labels_to_ids = labels_to_ids
     opt.ids_to_labels = ids_to_labels
 
-    opt.logger = logger
-
-    # tokenizer用于处理文本
-    tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
-
-    train_dataset = SequenceLabelingDataset(data=train_data, labels_to_ids=labels_to_ids, tokenizer=tokenizer, max_length=128)
-    dev_dataset = SequenceLabelingDataset(data=dev_data, labels_to_ids=labels_to_ids, tokenizer=tokenizer, max_length=128)
+    train_dataset = SequenceLabelingDataset(data=train_data, labels_to_ids=labels_to_ids, tokenizer=opt.tokenizer, max_length=opt.max_length)
+    dev_dataset = SequenceLabelingDataset(data=dev_data, labels_to_ids=labels_to_ids, tokenizer=opt.tokenizer, max_length=opt.max_length)
+    test_dataset = PredSequenceLabelingDataset(data=test_data, tokenizer=opt.tokenizer, max_length=opt.max_length)
 
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(train_dataset, batch_size=32, sampler=train_sampler, collate_fn=collate_fn)
 
     dev_sampler = SequentialSampler(dev_dataset)
     dev_dataloader = DataLoader(dev_dataset, batch_size=32, sampler=dev_sampler, collate_fn=collate_fn)
+
+    test_dataloader = DataLoader(test_dataset, batch_size=32, sampler=dev_sampler, collate_fn=pred_collate_fn)
+
+    return train_dataloader, dev_dataloader, test_dataloader
+
+
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_dir", type=str, default='./data/cluener/conll_format')
+    parser.add_argument("--log_path", type=str, default='./logs/cluener.log')
+    parser.add_argument("--epochs", type=int, default=2)
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--save_path", type=str, default="./save_models/cluener.pt")
+    parser.add_argument("--predict_path", type=str, default="./predict_results/predict.txt")
+
+    args = parser.parse_args()
+    print(args)
+    opt = Config(args)
+    logger = get_logger(opt.log_path)
+    opt.logger = logger
+
+    # tokenizer用于处理文本
+    tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
+    opt.tokenizer = tokenizer
+
+    # 加载数据
+    opt.logger.info("开始加载数据")
+    train_dataloader, dev_dataloader, test_dataloader = load_data(opt)
+    opt.logger.info("加载数据完成")
+    opt.logger.info(f"标签信息: {opt.labels_to_ids}")
 
     # 模型
     model = BertForTokenClassification.from_pretrained("bert-base-chinese", num_labels=len(opt.unique_tags))
@@ -68,4 +91,4 @@ if __name__ == "__main__":
             best_f1 = f1
             trainer.save(opt.save_path)
 
-    pred_result = trainer.predict(data_loader=dev_dataloader)
+    pred_result = trainer.predict(data_loader=test_dataloader)

@@ -93,3 +93,80 @@ class SequenceLabelingDataset(torch.utils.data.Dataset):
         item['sent_length'] = torch.as_tensor(len(tokenized_token_list))
 
         return item
+
+
+def pred_collate_fn(batch):
+    """
+    将list形式组织的样本数据拼接成一个batch
+
+    :param batch (list): 是一个列表, 每个元素是dataset中的一个样本
+    :return new_batch (dict): 是一个字典, 包含了一个batch的数据
+    """
+
+    all_input_ids, all_attention_mask, all_lens = [], [], []
+    for dataset in batch:
+        # dataset中一个样本的数据
+        input_ids, attention_mask = dataset['input_ids'], dataset['attention_mask']
+        sent_length = dataset['sent_length']
+        all_input_ids.append(input_ids)
+        all_attention_mask.append(attention_mask)
+        all_lens.append(sent_length)
+    
+    # list装载tensor, 可以用stack方法将其转换为tensor
+    all_input_ids = torch.stack(all_input_ids)
+    all_attention_mask = torch.stack(all_attention_mask)
+    all_lens = torch.stack(all_lens)
+    
+    # 该batch中最长的句子的长度
+    max_len = max(all_lens).item()
+    all_input_ids = all_input_ids[:, :max_len]
+    all_attention_mask = all_attention_mask[:, :max_len]
+
+    new_batch = {'input_ids': all_input_ids, 'attention_mask': all_attention_mask, 'sent_length': all_lens}
+    
+    return new_batch
+
+
+class PredSequenceLabelingDataset(torch.utils.data.Dataset):
+    
+    def __init__(self, data, tokenizer, max_length=128):
+        """
+        :param data (list): 每个样本是包含text的dict
+        :param tokenizer: 用于处理输入句子的tokenizer
+        :param max_length: 限制句子的最大长度
+        """
+        self.data = data
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+
+        sample = self.data[idx]
+        # sentence就是原始的输入句子, tags是对应的标签序列转换成字符串(中间用空格分开)
+        sentence = sample['text']
+        token_list = [token for token in sentence]
+        tokenized_token_list = []
+
+        for token in token_list:
+            # tokenize the word and count the number of subwords
+            tokenized_token = self.tokenizer.tokenize(token)
+            tokenized_token_list.extend(tokenized_token)
+
+        # 将token_list转换为tensor
+        sent_encoded = self.tokenizer.encode_plus(tokenized_token_list,    
+            add_special_tokens=True,  # Add [CLS] and [SEP]
+            max_length = self.max_length,  # maximum length of a sentence
+            truncation=True,
+            padding='max_length',
+            return_attention_mask = True,  # Generate the attention mask
+        )
+
+        # 将所有内容转换为tensor
+        item = {key: torch.as_tensor(val) for key, val in sent_encoded.items()}
+        # 句子的真实长度
+        item['sent_length'] = torch.as_tensor(len(tokenized_token_list))
+
+        return item

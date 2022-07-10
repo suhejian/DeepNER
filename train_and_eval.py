@@ -47,7 +47,7 @@ class Trainer(object):
             self.optimizer.step()
             self.optimizer.zero_grad()
             if step % self.opt.log_step == 0:
-                self.logger.info(f"Train Loss Per Batch: {loss.item()}")
+                self.logger.info(f"Train Loss Per Batch in Step {step}: {loss.item()}")
             loss_list.append(loss.cpu().item())
         
         self.logger.info(f"Train Loss in Epoch {epoch}: {np.mean(loss_list)}")
@@ -116,12 +116,11 @@ class Trainer(object):
         for batch in tqdm(data_loader, desc="Predicting"):
             input_ids = batch['input_ids'].to(self.opt.device)  # [batch_size, seq_len]
             attention_masks = batch['attention_mask'].to(self.opt.device)   # [batch_size, seq_len]
-            labels = batch['labels'].to(self.opt.device)    # [batch_size, seq_len]
             sent_lengths = batch['sent_length']  # [batch_size]
             
             # 预测的时候不计算梯度
             with torch.no_grad():
-                output = self.model(input_ids=input_ids, attention_mask=attention_masks, labels=labels)
+                output = self.model(input_ids=input_ids, attention_mask=attention_masks)
             
             _, logits = output.loss, output.logits
             # 预测结果, logits: [batch_size, seq_len, num_classes]
@@ -140,7 +139,7 @@ class Trainer(object):
                         break
                     else:
                         temp.append(label_id)
-                        
+
         with open(self.opt.predict_path, 'w') as f:
             for pred in pred_result:
                 f.write(str(pred) + '\n')

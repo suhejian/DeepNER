@@ -19,8 +19,9 @@ def read_data(data_dir):
 
     train_data = read_jsonl_file(os.path.join(data_dir + "/train.jsonl"))
     dev_data = read_jsonl_file(os.path.join(data_dir + "/dev.jsonl"))
+    test_data = read_jsonl_file(os.path.join(data_dir + "/test.jsonl"))
 
-    return train_data, dev_data
+    return train_data, dev_data, test_data
 
 
 def read_jsonl_file(file_path):
