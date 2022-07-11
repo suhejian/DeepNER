@@ -48,12 +48,14 @@ def load_data(opt):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default='./data/cluener/conll_format')
-    parser.add_argument("--log_path", type=str, default='./logs/cluener.log')
+    parser.add_argument("--dataset", type=str, default="cluener", help="数据集名称")
+    parser.add_argument("--data_dir", type=str, default='./data/cluener/conll_format', help="数据集目录")
+    parser.add_argument("--log_name", type=str, default='cluener.log', help="日志文件名")
+    parser.add_argument("--save_name", type=str, default="bert-cluener.pt")
+    parser.add_argument("--predict_name", type=str, default="cluener-predict.txt")
     parser.add_argument("--epochs", type=int, default=2)
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--save_path", type=str, default="./save_models/cluener.pt")
-    parser.add_argument("--predict_path", type=str, default="./predict_results/predict.txt")
+
 
     args = parser.parse_args()
     print(args)

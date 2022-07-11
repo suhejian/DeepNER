@@ -1,4 +1,4 @@
-from tkinter.messagebox import NO
+import os
 import torch.nn as nn
 import torch
 
@@ -12,13 +12,31 @@ class Config:
 
         self.pretrained_model_name = "bert-base-chinese"
         self.data_dir = "./data/cluener/conll_format"
-        self.log_path = "./logs/cluener.log"
-        self.save_path = "./save_models/cluener.pt"
-        self.predict_path = "./predict_results/predict.txt"
-        # 标签信息
+
+        # 日志设置
+        self.log_dir = "./logs" # 日志目录
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+        self.log_path = os.path.join(self.log_dir, args.log_name)
+
+        # 模型结果保存设置
+        self.save_dir = "./save_models/"    # 模型保存目录
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
+        self.save_path = os.path.join(self.save_dir, args.save_name)
+
+        # 模型预测结果保存设置
+        self.predict_dir = "./predict_results"    # 模型预测结果保存目录
+        if not os.path.exists(self.predict_dir):
+            os.makedirs(self.predict_dir)
+        self.predict_path = os.path.join(self.predict_dir, args.predict_name)
+        
+        # 标签信息, 可以从外部获取
         self.unique_tags = []
         self.labels_to_ids = {}
         self.ids_to_labels = {}
+        
+        # 模型训练设置
         self.epochs = 2
         self.tokenizer = None
         self.max_length = 128
