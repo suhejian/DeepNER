@@ -84,7 +84,10 @@ class SequenceLabelingDataset(torch.utils.data.Dataset):
         for i, tag in enumerate(aligned_tag_list):
             if self.labels_to_ids.get(tag) != None:
                 # 之所以是i + 1是因为第一个token是[CLS]
-                label_ids[i + 1] = self.labels_to_ids.get(tag)
+                # 同时, 最后一个token要么是[SEP]要么是[PAD], 
+                # 所以label_ids的最后一个元素一定是-100
+                if i + 1 < self.max_length:
+                    label_ids[i + 1] = self.labels_to_ids.get(tag)
 
         # 将所有内容转换为tensor
         item = {key: torch.as_tensor(val) for key, val in sent_encoded.items()}

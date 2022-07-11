@@ -35,7 +35,9 @@ NER最常用的范式就是**序列标注**，输入是一个`token`序列，输
 5. 安装PyTorch：`pip install torch==1.10.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html`
     可根据自己的GPU型号，CUDA版本等自行选择合适的PyTorch版本
 6. 安装其它依赖包：`pip install -r requirements.txt`
-7. 运行：`CUDA_VISIBLE_DEVICES=0 python run.py`
+7. 运行：`CUDA_VISIBLE_DEVICES=0 python run.py`，模型使用提供的CLUENER数据集。
+
+可以将自己的数据集格式转换一下，改变相应的命令行参数
 
 ## 待完成
 1. 数据统计
