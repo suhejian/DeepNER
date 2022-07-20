@@ -1,5 +1,6 @@
 import argparse
 import pandas as pd
+import prettytable as pt
 from tqdm import tqdm
 from transformers import BertTokenizer, BertForTokenClassification
 from torch.utils.data import DataLoader
@@ -9,6 +10,7 @@ from tools.data_utils import read_data
 from torch.utils.data import RandomSampler, SequentialSampler
 from train_and_eval import Trainer
 import torch
+from tools.data_analyze import data_length_info, data_entity_info
 from tools.utils import get_logger
 from config import Config
 
@@ -22,6 +24,24 @@ def load_data(opt):
 
     # 加载数据
     train_data, dev_data, test_data = read_data(opt.data_dir)
+
+    # 数据集信息
+    train_num_sen, train_min_len, train_max_len, train_avg_len = data_length_info(train_data)
+    dev_num_sen, dev_min_len, dev_max_len, dev_avg_len = data_length_info(dev_data)
+    test_num_sen, test_min_len, test_max_len, test_avg_len = data_length_info(test_data)
+    train_num_entities, train_entity_counter = data_entity_info(train_data)
+    dev_num_entities, dev_entity_counter = data_entity_info(dev_data)
+    
+    table = pt.PrettyTable(["Dataset Info", 'num_sentences', "min_length", "max_length", "avg_length", "num_entities"])
+    table.add_row(["Train", train_num_sen, train_min_len, train_max_len, train_avg_len, train_num_entities])
+    table.add_row(["Dev", dev_num_sen, dev_min_len, dev_max_len, dev_avg_len, dev_num_entities])
+    table.add_row(["Test", test_num_sen, test_min_len, test_max_len, test_avg_len, None])
+    # 打印数据集的相关信息, 包括句子长度信息和实体信息
+    opt.logger.info("\n{}".format(table))
+
+    # 只有训练集和验证集有实体, 可以打印详细的实体分布情况信息
+    opt.logger.info(f"Train Data Entities: {train_entity_counter}")
+    opt.logger.info(f"Dev Data Entities: {dev_entity_counter}")
 
     # 得到标签相关信息, 一方面为了将标签转换为索引, 另一方面为BERT初始化时使用
     unique_tags, labels_to_ids, ids_to_labels = get_unique_tags(train_data)
@@ -59,21 +79,19 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
-    print(args)
     opt = Config(args)
-    logger = get_logger(opt.log_path)
-    opt.logger = logger
+    opt.logger = get_logger(opt.log_path)
 
     # tokenizer用于处理文本
     tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
     opt.tokenizer = tokenizer
 
     # 加载数据
-    opt.logger.info("开始加载数据")
+    opt.logger.info("**************************Start Loading Data*****************************")
     train_dataloader, dev_dataloader, test_dataloader = load_data(opt)
-    opt.logger.info("加载数据完成")
+    opt.logger.info("**************************Finish Loading Dara****************************")
     opt_info = dict(opt.__dict__)
-    opt.logger.info("参数信息: ")
+    opt.logger.info("Hyper parameters: ")
     for k in opt_info:
         opt.logger.info(f'{k}: {opt_info[k]}')
 
