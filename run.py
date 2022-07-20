@@ -33,13 +33,14 @@ def load_data(opt):
     dev_dataset = SequenceLabelingDataset(data=dev_data, labels_to_ids=labels_to_ids, tokenizer=opt.tokenizer, max_length=opt.max_length)
     test_dataset = PredSequenceLabelingDataset(data=test_data, tokenizer=opt.tokenizer, max_length=opt.max_length)
 
-    train_sampler = RandomSampler(train_dataset)
+    train_sampler = RandomSampler(train_dataset)    # 训练集抽样方式是Random的
     train_dataloader = DataLoader(train_dataset, batch_size=32, sampler=train_sampler, collate_fn=collate_fn)
 
-    dev_sampler = SequentialSampler(dev_dataset)
+    dev_sampler = SequentialSampler(dev_dataset)    # 验证集抽样方式是Sequential的
     dev_dataloader = DataLoader(dev_dataset, batch_size=32, sampler=dev_sampler, collate_fn=collate_fn)
 
-    test_dataloader = DataLoader(test_dataset, batch_size=32, sampler=dev_sampler, collate_fn=pred_collate_fn)
+    test_sampler = SequentialSampler(test_dataset)  # 测试集抽样方式也是Sequential的
+    test_dataloader = DataLoader(test_dataset, batch_size=32, sampler=test_sampler, collate_fn=pred_collate_fn)
 
     return train_dataloader, dev_dataloader, test_dataloader
 
@@ -71,7 +72,10 @@ if __name__ == "__main__":
     opt.logger.info("开始加载数据")
     train_dataloader, dev_dataloader, test_dataloader = load_data(opt)
     opt.logger.info("加载数据完成")
-    opt.logger.info(f"标签信息: {opt.labels_to_ids}")
+    opt_info = dict(opt.__dict__)
+    opt.logger.info("参数信息: ")
+    for k in opt_info:
+        opt.logger.info(f'{k}: {opt_info[k]}')
 
     # 模型
     model = BertForTokenClassification.from_pretrained("bert-base-chinese", num_labels=len(opt.unique_tags))
@@ -92,5 +96,10 @@ if __name__ == "__main__":
         if f1 > best_f1:
             best_f1 = f1
             trainer.save(opt.save_path)
-
+    # 模型对测试集进行预测
     pred_result = trainer.predict(data_loader=test_dataloader)
+
+    # 模型可以用训练好的模型对单个句子进行预测
+    trainer.load(opt.save_path)
+    text = '阿森纳将在主场对阵基伏迪纳摩，赢下这场比赛他们就将铁定出线。所以，阿森纳除了缺少法布雷加斯以外，'
+    print(trainer.predict_single_text(text))

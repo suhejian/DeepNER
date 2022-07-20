@@ -15,6 +15,8 @@
 
 ## 一些说明
 
+暂时只针对中文的NER数据
+
 ### 数据格式
 
 NER最常用的范式就是**序列标注**，输入是一个`token`序列，输出是一个标签序列。虽然`conll`格式是最常用的，但是我这里是用JSON格式存储每个样本的。
@@ -35,7 +37,7 @@ NER最常用的范式就是**序列标注**，输入是一个`token`序列，输
 5. 安装PyTorch：`pip install torch==1.10.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html`
     可根据自己的GPU型号，CUDA版本等自行选择合适的PyTorch版本
 6. 安装其它依赖包：`pip install -r requirements.txt`
-7. 运行：`CUDA_VISIBLE_DEVICES=0 python run.py`，模型使用提供的CLUENER数据集。
+7. 运行：`CUDA_VISIBLE_DEVICES=0 python run.py`，模型默认是BERT, 使用提供的CLUENER数据集。
 
 可以将自己的数据集格式转换一下，改变相应的命令行参数
 
@@ -52,3 +54,4 @@ NER最常用的范式就是**序列标注**，输入是一个`token`序列，输
 【参考】：
 1. https://github.com/ljynlp/W2NER
 2. https://github.com/lonePatient/BERT-NER-Pytorch
+3. https://github.com/taishan1994/pytorch_GlobalPointer_triple_extraction

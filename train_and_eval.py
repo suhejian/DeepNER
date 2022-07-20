@@ -1,5 +1,3 @@
-from cProfile import label
-from statistics import mode
 import numpy as np
 import prettytable as pt
 import torch
@@ -148,6 +146,61 @@ class Trainer(object):
         
         return pred_result
 
+    
+    def predict_single_text(self, text):
+        """
+        预测单个句子中的实体
+        """
+        tokenizer = self.opt.tokenizer
+        encoded_text = tokenizer.encode_plus(text)
+        input_ids = torch.tensor(encoded_text["input_ids"]).unsqueeze(0).to(self.opt.device)
+        attention_mask = torch.tensor(encoded_text["attention_mask"]).unsqueeze(0).to(self.opt.device)
+        res = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        sent_lengths = torch.tensor([len(text)]).to(self.opt.device)
+        
+        pred_result = self._decode(res.logits, sent_lengths, self.opt.ids_to_labels)[0] # 因此只有一个句子, 取第一个即可
+        res = {}
+        for item in pred_result:
+            # item: [entity_type, start_index, end_index], 左闭右闭
+            entity_type = item[0]
+            start_index = item[1]
+            end_index = item[2]
+            if entity_type not in res:
+                res[entity_type] = []
+            res[entity_type].append(text[start_index: end_index + 1])
+        res['text'] = text
+        return res
+
+
+    def _decode(self, logits, sent_lengths, ids_to_labels):
+        """
+        根据模型的输出进行解码
+
+        :param logits 模型输出, [batch_size, seq_len, num_tags]
+        :param sent_lengths 每个句子对应的长度, [batch_size]
+        :param ids_to_labels 标签ID到标签的映射
+        """
+
+        pred_result = []
+        # 预测结果, logits: [batch_size, seq_len, num_classes]
+        preds = logits.detach().cpu().numpy()
+        preds = np.argmax(preds, axis=2).tolist()   # [batch_size, seq_len]
+        input_lens = sent_lengths.cpu().numpy().tolist()    
+        for i, label in enumerate(preds):
+            # 对应每一个样本的标签序列
+            temp = []
+            for j, label_id in enumerate(label):
+                # 对应每一个token的标签id
+                if j == 0:  # 句子开头, [CLS]
+                    continue
+                elif j == input_lens[i] - 1:    # 句子结尾, 该句子的标签序列和预测序列已经得到
+                    pred_result.append(get_entities(temp, ids_to_labels))
+                    break
+                else:
+                    temp.append(label_id)
+        
+        return pred_result
+    
     
     def save(self, path):
         torch.save(self.model.state_dict(), path)
